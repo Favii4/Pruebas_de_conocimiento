@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Aplicaciones</title>
+
+    <style>
+      html,
+      body,
+      #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+      }
+    </style>
+    
+    <link rel="stylesheet" href="https://js.arcgis.com/4.20/esri/themes/light/main.css">
+    <script src="https://js.arcgis.com/4.20/"></script>
+    
+    <script>
+      require(["esri/config", "esri/Map", "esri/views/MapView", "esri/layers/FeatureLayer", "esri/widgets/BasemapToggle", "esri/widgets/BasemapGallery", "esri/Graphic", "esri/layers/GraphicsLayer", "esri/rest/locator"], function (esriConfig, Map, MapView, FeatureLayer, BasemapToggle, BasemapGallery, Graphic, GraphicsLayer, locator) {
+
+        esriConfig.apiKey = "AAPKa85ccc35fd384f38af4f9324dd911f12VgIeHvhTUmICfgitrTY5fIwe77JDsB-V0-SC31tyJHRrWOn5IQd1TdqDI50-3NwN";
+
+        const map = new Map({  //Mapa base
+          basemap: "arcgis-navigation" 
+        });
+        
+        const view = new MapView({ //Ubicacion geoespacial en el mapa
+          map: map,
+          center: [-74.051286, 4.673644], 
+          zoom: 14, 
+          container: "viewDiv" 
+        });
+
+        const graphicsLayer = new GraphicsLayer(); //Se agrega la capa de graficos
+        map.add(graphicsLayer);
+
+        const point = { //Propiedades de un punto
+            type: "point", longitude: -74.051286, latitude: 4.673644
+        };
+
+        const simpleMarkerSymbol = { //Propiedades de un punto
+            type: "simple-marker",
+            color: [0, 128, 0],
+            outline: {color: [255, 255, 255], width: 1
+            }
+        };
+
+        const pointGraphic = new Graphic({ //Crea un punto
+            geometry: point,
+            symbol: simpleMarkerSymbol
+        });
+        graphicsLayer.add(pointGraphic);
+
+        const cambioMapa = new BasemapToggle({  //Cambio de mapa base
+          view: view,
+          nextBasemap: "arcgis-streets-night"
+        });
+
+        view.ui.add(cambioMapa,"bottom-right"); //Boton de cambio  de mapa
+
+        const trailheadsRenderer = { //Se crea icono de los colegios
+        "type": "simple",
+        "symbol": {
+          "type": "picture-marker",
+          "url": "https://image.flaticon.com/icons/png/512/1080/1080985.png",
+          "width": "22px",
+          "height": "22px"
+          }
+        }
+
+        const colegios = new FeatureLayer({ //Se agrega la capa de colegios y se cambia el icono
+          url: "https://services7.arcgis.com/rxsqAG0ztOQO48WN/arcgis/rest/services/Colegios_Bogota_2017/FeatureServer",
+          renderer: trailheadsRenderer, 
+        });
+
+        map.add(colegios);
+
+        const popupTrailheads = { //Cadena de datos para el colegio
+          "title": "Informacion del colegio",
+          "content": "<b>Direccion:</b> {DireccionG}<br><b>Ciudad:</b> {CiudadGeo}"
+        }
+
+        const trailheads = new FeatureLayer({ // Se toman las variables de la capa colegios
+          url: "https://services7.arcgis.com/rxsqAG0ztOQO48WN/arcgis/rest/services/Colegios_Bogota_2017/FeatureServer",
+          outFields: ["DireccionG","CiudadGeo"],
+          popupTemplate: popupTrailheads
+        });
+
+        map.add(trailheads);
+
+        const serviceUrl = "http://geocode-api.arcgis.com/arcgis/rest/services/World/GeocodeServer"; //Geocodificacion inversa
+
+        view.on("click", function(evt){ //Funcion principal
+          const params = {
+            location: evt.mapPoint
+        };
+
+        function showAddress(address, pt) { //Funcion para mostrar coordenadas y direccion
+          view.popup.open({
+              title: "Direccion seleccionada: " + Math.round(pt.longitude * 100000)/100000 + ", " + Math.round(pt.latitude * 100000)/100000,
+              content: address,
+              location: pt
+          });
+        }
+
+        locator.locationToAddress(serviceUrl, params) //Funcion para mostrar la direccion con un clic
+        .then(function(response) { // Muestra que no se encontro direccion
+          const address = response.address;
+          showAddress(address, evt.mapPoint);
+        }, 
+        function(err) { // Muestra que se encontro la direccion
+          showAddress("No address found.", evt.mapPoint);
+        });
+
+    });    
+
+      });
+    </script>
+    
+  </head>
+  <body>
+    <div id="viewDiv"></div>
+  </body>
+</html>
